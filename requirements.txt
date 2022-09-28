@@ -1,0 +1,8 @@
+pandas
+yfinance
+numpy
+datetime
+streamlit
+matplotlib
+html5lib
+beautifulsoup4
