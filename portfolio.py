@@ -139,7 +139,7 @@ class Portfolio:
 
         # Plot only the observations > VaR on the main histogram so the plot comes out
         # nicely and doesn't overlap.
-        plt.figure(figsize=(12, 8))
+        plt.figure(figsize=(14, 8))
         plt.hist(self.portfolio[self.portfolio > self.var], bins=20)
         plt.hist(self.portfolio[self.portfolio < self.var], bins=10)
         plt.axvline(self.var, color='red', linestyle='solid')
