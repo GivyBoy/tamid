@@ -28,7 +28,7 @@ class Portfolio:
             val = stock(val, stocks[val][0], stocks[val][1])
             self.stocks.append(val)
 
-        self.rets = self._get_data()
+        self.rets = self._get_data().pct_change()
         self._short()
         self.portfolio = self._create_portfolio()
         self.drawdown = self._drawdown()
@@ -50,7 +50,7 @@ class Portfolio:
 
         data.columns = [f"{val.name.upper()}" for idx, val in enumerate(self.stocks)]
 
-        return data.pct_change()
+        return data
 
     def _short(self):
 
