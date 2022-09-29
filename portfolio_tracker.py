@@ -79,7 +79,8 @@ with st.sidebar:
 
 st.write(f"Firstly, let's take a look at our portfolio's value since its creation in October 2020. Our PnL since "
          f"inception  is **{round(cum_rets.portfolio_returns[-1], 2)}**%. Below shows the day-over-day change of the"
-         f" portfolio's value")
+         f" portfolio's value, in addition to an underwater/drawdown plot which shows the periods in which the"
+         f" portfolio's returns were negative from a local maxima")
 
 difference = cum_rets.portfolio_returns[-2] - cum_rets.portfolio_returns[-1]
 delta = -1*round(difference, 2) if (cum_rets.portfolio_returns[-2] < 0 and cum_rets.portfolio_returns[-1] < 0) \
@@ -99,6 +100,15 @@ plt.legend(["Portfolio", "S&P500"], bbox_to_anchor=(1, 1))
 plt.tight_layout()
 st.pyplot()
 
+plt.plot(TAMID.drawdown, color='red', linewidth=0.8)
+plt.title("TAMID's Drawdowns")
+plt.xlabel('Date')
+plt.ylabel('Returns (%)')
+plt.fill_between(TAMID.drawdown.index, TAMID.drawdown.portfolio_returns, color='r', alpha=0.4)
+plt.legend(["Portfolio"], bbox_to_anchor=(1, 1))
+plt.tight_layout()
+st.pyplot()
+
 st.write(f"Next up, we have the portfolio's rolling standard deviation. The standard deviation (annualized) of the a"
          f" portfolio is typically referred to as its volatility")
 
@@ -114,7 +124,7 @@ plt.legend(["Portfolio", "S&P500"], bbox_to_anchor=(1, 1))
 plt.tight_layout()
 st.pyplot()
 
-st.write(f"We will now look at the rolling beta of the portfolio. Simply put, beta measures a how volatile a stock is, "
+st.write(f"We will now look at the rolling beta of the portfolio. Simply put, beta measures how volatile a stock is, "
          f"relative to the market. A stock with a beta of 1 will move in tandem with the market (S&P500), "
          f"since the market itself has a beta of one")
 # plt.figure(figsize=(12, 8))
@@ -130,11 +140,29 @@ st.markdown("<h2 style='text-align: center; color: #40b6e4;'> Profitability Metr
             unsafe_allow_html=True
             )
 
-st.write("Sharpe")
-st.write("Info")
-st.write("Sortino")
+st.write("Sharpe Ratio is known as the risk adjusted returns. It measures the returns in excess of the risk-free"
+         " per unit of risk")
 
-st.markdown("<h2 style='text-align: center; color: #40b6e4;'> Risk Metrics </h2>",
+plt.plot(TAMID.sharpe_ratio)
+plt.title("TAMID's Rolling Sharpe Ratio")
+plt.xlabel('Date')
+plt.ylabel('Sharpe Ratio')
+plt.legend(["Sharpe Ratio"], bbox_to_anchor=(1, 1))
+plt.tight_layout()
+st.pyplot()
+
+st.write("The Information ratio is similar to the Sharpe Ratio, but it measures excess returns beyond that of "
+         "a specified benchmark (eg the S&P) instead of the risk-free rate")
+
+plt.plot(TAMID.info_ratio)
+plt.title("TAMID's Rolling Information Ratio")
+plt.xlabel('Date')
+plt.ylabel('Information Ratio')
+plt.legend(["Information Ratio"], bbox_to_anchor=(1, 1))
+plt.tight_layout()
+st.pyplot()
+
+st.markdown("<h2 style='text-align: center; color: #40b6e4;'> Risk Management Metrics </h2>",
             unsafe_allow_html=True
             )
 
@@ -142,6 +170,12 @@ st.write(f"VaR (Value at Risk) measures the amount of potential loss that could 
          f" a specified period of time (ie the risk). For example, if the 95% one-month VaR is 1 million, there is "
          f"95% confidence that over the next month the portfolio will not lose more than 1 million. The daily VaR of "
          f"the TAMID portfolio is **{round(TAMID.var * 100, 2)}**%")
+
+st.write(f"CVaR (aka Expected Shortfall) quantifies the amount of tail risk an investment portfolio has. CVaR is"
+         f" derived by taking a weighted average of the “extreme” losses in the tail of the distribution of possible"
+         f" returns, beyond the value at risk (VaR) cutoff point. For example, a one-day 99% CVaR of 1 million means"
+         f" that the expected loss of the worst 1% scenarios over a one-day period is 1 million. The daily CVaR of"
+         f" the TAMID portfolio is **{round(TAMID.cvar * 100, 2)}**%")
 
 TAMID._plot_var()
 st.pyplot()

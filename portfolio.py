@@ -94,7 +94,7 @@ class Portfolio:
 
     def _drawdown(self):
 
-        wealth_index = (1+self.rets).cumprod()
+        wealth_index = (1+self.portfolio).cumprod()
         previous_peaks = wealth_index.cummax()
         # drawdown = (wealth_index - previous_peaks)/previous_peaks
 
@@ -116,11 +116,12 @@ class Portfolio:
 
     def _info_ratio(self):
 
-        spx_rets = self.spx.cumprod()
-        mean_rets = self.portfolio.rolling(self.window).mean()
-        vol = self._vol()
+        spx_rets = self.spx["Adj Close"].rolling(self.window).mean()
+        mean_rets = self.portfolio.portfolio_returns.rolling(self.window).mean()
+        difference = mean_rets - spx_rets
+        vol = difference.rolling(self.window).std() * np.sqrt(252)
 
-        return (mean_rets - spx_rets)/vol
+        return difference / vol
 
     def _vol(self):
         return self.portfolio.rolling(self.window).std().dropna() * np.sqrt(252)
