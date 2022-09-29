@@ -10,7 +10,7 @@ from dataclasses import dataclass
 class stock:
     name: str
     date: str
-    short: False
+    short: bool
 
 
 class Portfolio:

@@ -1,14 +1,12 @@
 import time
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-plt.style.use('seaborn-whitegrid')
 import yfinance as yf
 import streamlit as st
 from datetime import datetime
 from portfolio import Portfolio
-
+plt.style.use('seaborn-whitegrid')
 
 tamid = {'FTAI': ['2021-02-01', False],
         'AMT': ['2021-02-01', False],
@@ -141,7 +139,7 @@ st.markdown("<h2 style='text-align: center; color: #40b6e4;'> Profitability Metr
             unsafe_allow_html=True
             )
 
-st.write("Sharpe Ratio is known as the risk adjusted returns. It measures the returns in excess of the risk-free"
+st.write("Sharpe Ratio is known as the risk adjusted returns. It measures the returns in excess of the risk-free rate"
          " per unit of risk")
 
 plt.plot(TAMID.sharpe_ratio)
@@ -174,8 +172,8 @@ st.write(f"VaR (Value at Risk) measures the amount of potential loss that could 
 
 st.write(f"CVaR (aka Expected Shortfall) quantifies the amount of tail risk an investment portfolio has. CVaR is"
          f" derived by taking a weighted average of the “extreme” losses in the tail of the distribution of possible"
-         f" returns, beyond the value at risk (VaR) cutoff point. For example, a one-day 99% CVaR of 1 million means"
-         f" that the expected loss of the worst 1% scenarios over a one-day period is 1 million. The daily CVaR of"
+         f" returns, beyond the value at risk (VaR) cutoff point. For example, a one-day 95% CVaR of 1 million means"
+         f" that the expected loss of the worst 5% scenarios over a one-day period is 1 million. The daily CVaR of"
          f" the TAMID portfolio is **{round(TAMID.cvar * 100, 2)}**%")
 
 TAMID._plot_var()
