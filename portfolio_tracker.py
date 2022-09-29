@@ -24,7 +24,8 @@ tamid = {'FTAI': ['2021-02-01', False],
         'MHK': ['2021-10-01', False],
         'ACLS': ['2021-10-01', False],
         'EPD': ['2021-10-01', False],
-        'PLYM': ['2021-10-01', False]
+        'PLYM': ['2021-10-01', False],
+        'ED': ['2022-04-01', True]
          }
 
 st.set_option('deprecation.showPyplotGlobalUse', False)
