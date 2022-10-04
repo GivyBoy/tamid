@@ -33,7 +33,7 @@ st.markdown("<h1 style='text-align: center; color: #40b6e4;'> TAMID at Miami's P
             )
 
 with st.spinner("Loading..."):
-    time.sleep(10)
+    time.sleep(2)
 
 TAMID = Portfolio(tamid)
 cum_rets = ((1+TAMID.portfolio).cumprod() - 1) * 100

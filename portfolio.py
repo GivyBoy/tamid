@@ -1,3 +1,5 @@
+import threading
+import sys
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -13,6 +15,24 @@ class stock:
     short: bool
 
 
+class ReturnValueThread(threading.Thread):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.result = None
+
+    def run(self):
+        if self._target is None:
+            return  # could alternatively raise an exception, depends on the use case
+        try:
+            self.result = self._target(*self._args, **self._kwargs)
+        except Exception as exc:
+            print(f'{type(exc).__name__}: {exc}', file=sys.stderr)  # properly handle the exception
+
+    def join(self, *args, **kwargs):
+        super().join(*args, **kwargs)
+        return self.result
+
+
 class Portfolio:
 
     def __init__(self, stocks):
@@ -22,15 +42,20 @@ class Portfolio:
         self.alpha = 0.95
         self.spx = yf.download("^GSPC", '2020-10-01')[["Adj Close"]]
         self.spx = self.spx.pct_change().dropna()
+        # self.spx = np.log((1+self.spx))
         self.stocks = []
 
         for val in stocks:
             val = stock(val, stocks[val][0], stocks[val][1])
             self.stocks.append(val)
 
-        self.rets = self._get_data().pct_change()
+        thread = ReturnValueThread(target=self._get_data)
+        thread.start()
+        self.data = thread.join()
+        self.rets = self.data.pct_change()
         self._short()
         self.portfolio = self._create_portfolio()
+        # self.portfolio = np.log((1+self.portfolio))
         self.drawdown = self._drawdown()
         self.sharpe_ratio = self._sharpe_ratio()
         self.beta = self._get_beta()
@@ -53,7 +78,6 @@ class Portfolio:
         return data
 
     def _short(self):
-
         for val in self.stocks:
             if val.short:
                 self.rets[val.name] *= -1
