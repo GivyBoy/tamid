@@ -4,9 +4,10 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 import matplotlib.pyplot as plt
-
+from optimized_potfolio import MVO
 from dataclasses import dataclass
 
+TRADING_DAYS_PER_YEAR = 252
 
 @dataclass()
 class stock:
@@ -37,12 +38,11 @@ class Portfolio:
 
     def __init__(self, stocks):
 
-        self.rate = 0.03
+        self.rate = 0.04
         self.window = 14
         self.alpha = 0.95
         self.spx = yf.download("^GSPC", '2020-10-01')[["Adj Close"]]
-        self.spx = self.spx.pct_change().dropna()
-        # self.spx = np.log((1+self.spx))
+        self.spx = self.spx.pct_change()
         self.stocks = []
 
         for val in stocks:
@@ -53,16 +53,23 @@ class Portfolio:
         thread.start()
         self.data = thread.join()
         self.rets = self.data.pct_change()
+        # self.rets = np.log(1+self.rets)
+        self.mvo = MVO(self.rets).opt_port()
         self._short()
         self.portfolio = self._create_portfolio()
-        # self.portfolio = np.log((1+self.portfolio))
         self.drawdown = self._drawdown()
-        self.sharpe_ratio = self._sharpe_ratio()
-        self.beta = self._get_beta()
+        self.sharpe_ratio = self._sharpe_ratio(self.portfolio)
+        self.mvo_sharpe = self._sharpe_ratio(self.mvo)
+        self.beta = self._get_beta(self.portfolio)
+        self.mvo_beta = self._get_beta(self.mvo)
+        self.spx_beta = self._get_beta(self.spx)
         self.info_ratio = self._info_ratio()
-        self.vol = self._vol()
-        self.var = self._var()
-        self.cvar = self._cvar()
+        self.vol = self._vol(self.portfolio)
+        self.mvo_vol = self._vol(self.mvo)
+        self.var = self._var(self.portfolio)
+        self.mvo_var = self._var(self.mvo)
+        self.cvar = self._cvar(self.portfolio)
+        self.mvo_cvar = self._cvar(self.mvo)
 
     def _get_data(self) -> pd.DataFrame:
         for idx, val in enumerate(self.stocks):
@@ -103,11 +110,11 @@ class Portfolio:
 
         return portfolio
 
-    def _get_beta(self):
-        r = self.portfolio.copy()
+    def _get_beta(self, returns):
+        r = returns.copy()
         r['spx'] = self.spx['Adj Close']
 
-        cov = r.rolling(self.window).cov().unstack()[self.portfolio.columns[0]]['spx']
+        cov = r.rolling(self.window).cov().unstack()[r.columns[0]]['spx']
         cov = cov.to_frame('portfolio_returns').dropna()
         var = self.spx.rolling(self.window).var().dropna()
 
@@ -120,16 +127,15 @@ class Portfolio:
 
         wealth_index = (1+self.portfolio).cumprod()
         previous_peaks = wealth_index.cummax()
-        # drawdown = (wealth_index - previous_peaks)/previous_peaks
 
         return (wealth_index - previous_peaks)/previous_peaks
 
-    def _sharpe_ratio(self):
+    def _sharpe_ratio(self, returns):
 
-        vol = self._vol()
-        mean_rets = self.portfolio.rolling(self.window).mean()
+        vol = self._vol(returns)
+        mean_rets = returns.rolling(self.window).mean()
 
-        return (mean_rets - self.rate) / vol
+        return ((mean_rets - (self.rate/TRADING_DAYS_PER_YEAR)) / vol) * np.sqrt(TRADING_DAYS_PER_YEAR)
 
     # def sortino_ratio(self, portfolio, rate=0.03):
     #
@@ -147,33 +153,36 @@ class Portfolio:
 
         return difference / vol
 
-    def _vol(self):
-        return self.portfolio.rolling(self.window).std().dropna() * np.sqrt(252)
+    def _vol(self, returns):
+        return returns.rolling(self.window).std().dropna() * np.sqrt(252)
 
-    def _var(self):
-        return np.percentile(self.portfolio, 100 * (1 - self.alpha))
+    def _var(self, returns):
+        return np.percentile(returns, 100 * (1 - self.alpha))
 
-    def _cvar(self):
+    def _cvar(self, returns):
         # Call out to our existing function
-        var = self._var()
-        returns = self.portfolio.copy().fillna(0.0)
+        var = self._var(returns)
+        val = self.portfolio.copy().fillna(0.0)
 
-        return np.nanmean(returns[returns < var])
+        return np.nanmean(returns[val < var])
 
-    def _plot_var(self):
+    def plot_var(self, returns, var, cvar, title: str):
 
         # Plot only the observations > VaR on the main histogram so the plot comes out
         # nicely and doesn't overlap.
         plt.figure(figsize=(14, 8))
-        plt.hist(self.portfolio[self.portfolio > self.var], bins=20)
-        plt.hist(self.portfolio[self.portfolio < self.var], bins=10)
-        plt.axvline(self.var, color='red', linestyle='solid')
-        plt.axvline(self.cvar, color='red', linestyle='dashed')
+        plt.hist(returns[returns > var], bins=20)
+        plt.hist(returns[returns < var], bins=10)
+        plt.axvline(var, color='red', linestyle='solid')
+        plt.axvline(cvar, color='red', linestyle='dashed')
         plt.legend(['VaR for Specified Alpha as a Return',
                     'CVaR for Specified Alpha as a Return',
                     'Historical Returns Distribution',
                     'Returns < VaR'])
-        plt.title('Historical VaR and CVaR')
+        if title:
+            plt.title(f'{title} Historical VaR and CVaR')
+        else:
+            plt.title(f'Historical VaR and CVaR')
         plt.xlabel('Return')
         plt.ylabel('Observation Frequency')
 

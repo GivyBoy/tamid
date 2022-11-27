@@ -1,10 +1,7 @@
-import time
-import pandas as pd
+import pandas
 import numpy as np
 import matplotlib.pyplot as plt
-import yfinance as yf
 import streamlit as st
-from datetime import datetime
 from portfolio import Portfolio
 plt.style.use('seaborn-whitegrid')
 
@@ -34,6 +31,7 @@ st.markdown("<h1 style='text-align: center; color: #40b6e4;'> TAMID at Miami's P
 
 TAMID = Portfolio(tamid)
 cum_rets = ((1+TAMID.portfolio).cumprod() - 1) * 100
+mvo_cum_rets = ((1+TAMID.mvo).cumprod() - 1) * 100
 spx_rets = ((1+TAMID.spx).cumprod() - 1) * 100
 
 with st.sidebar:
@@ -88,11 +86,12 @@ col3.metric(label="Portfolio Value", value=f"{round(cum_rets.portfolio_returns[-
 
 plt.figure(figsize=(12, 8))
 plt.plot(cum_rets)
+plt.plot(mvo_cum_rets)
 plt.plot(spx_rets)
 plt.title("TAMID's Cumulative Returns")
 plt.xlabel('Date')
 plt.ylabel('Returns (%)')
-plt.legend(["Portfolio", "S&P500"], bbox_to_anchor=(1, 1))
+plt.legend(["Portfolio", "MVO Portfolio", "S&P500"], bbox_to_anchor=(1, 1))
 plt.tight_layout()
 st.pyplot()
 
@@ -109,14 +108,16 @@ st.write(f"Next up, we have the portfolio's rolling standard deviation. The stan
          f" portfolio is typically referred to as its volatility")
 
 vol = TAMID.vol * 100
+mvo_vol = TAMID.mvo_vol * 100
 spx_vol = TAMID.spx.rolling(TAMID.window).std().dropna() * np.sqrt(252) * 100
 # plt.figure(figsize=(12, 8))
 plt.plot(vol)
+plt.plot(mvo_vol)
 plt.plot(spx_vol)
 plt.title("TAMID's Rolling Volatilty")
 plt.xlabel('Date')
 plt.ylabel('Volatility (%)')
-plt.legend(["Portfolio", "S&P500"], bbox_to_anchor=(1, 1))
+plt.legend(["Portfolio", "MVO", "S&P500"], bbox_to_anchor=(1, 1))
 plt.tight_layout()
 st.pyplot()
 
@@ -125,10 +126,12 @@ st.write(f"We will now look at the rolling beta of the portfolio. Simply put, be
          f"since the market itself has a beta of one")
 # plt.figure(figsize=(12, 8))
 plt.plot(TAMID.beta)
+plt.plot(TAMID.mvo_beta)
+plt.plot(TAMID.spx_beta)
 plt.title("TAMID's Rolling Beta")
 plt.xlabel('Date')
 plt.ylabel('Beta')
-plt.legend(["Beta"], bbox_to_anchor=(1, 1))
+plt.legend(["Portfolio Beta", "MVO Beta", "S&P500 Beta"], bbox_to_anchor=(1, 1))
 plt.tight_layout()
 st.pyplot()
 
@@ -140,10 +143,11 @@ st.write("Sharpe Ratio is known as the risk adjusted returns. It measures the re
          " per unit of risk")
 
 plt.plot(TAMID.sharpe_ratio)
+plt.plot(TAMID.mvo_sharpe)
 plt.title("TAMID's Rolling Sharpe Ratio")
 plt.xlabel('Date')
 plt.ylabel('Sharpe Ratio')
-plt.legend(["Sharpe Ratio"], bbox_to_anchor=(1, 1))
+plt.legend(["Sharpe Ratio", "MVO Sharpe Ratio"], bbox_to_anchor=(1, 1))
 plt.tight_layout()
 st.pyplot()
 
@@ -173,5 +177,9 @@ st.write(f"CVaR (aka Expected Shortfall) quantifies the amount of tail risk an i
          f" that the expected loss of the worst 5% scenarios over a one-day period is 1 million. The daily CVaR of"
          f" the TAMID portfolio is **{round(TAMID.cvar * 100, 2)}**%")
 
-TAMID._plot_var()
+
+TAMID.plot_var(TAMID.portfolio, TAMID.var, TAMID.cvar, None)
 st.pyplot()
+
+# TAMID.plot_var(TAMID.mvo, TAMID.mvo_var, TAMID.mvo_cvar, "MVO")
+# st.pyplot()
