@@ -99,7 +99,7 @@ plt.plot(spx_rets)
 plt.title("TAMID's Cumulative Returns")
 plt.xlabel('Date')
 plt.ylabel('Returns (%)')
-plt.legend(["Naive Portfolio", "MVO Portfolio", "S&P500"], bbox_to_anchor=(1, 1))
+plt.legend(["Naive Portfolio", "MVO Portfolio", "S&P500"], loc="upper left")
 plt.tight_layout()
 st.pyplot()
 
