@@ -41,8 +41,10 @@ class Portfolio:
         self.rate = 0.04
         self.window = 14
         self.alpha = 0.95
+        self.scalar = 0.25
         self.spx = yf.download("^GSPC", '2020-10-01')[["Adj Close"]]
         self.spx = self.spx.pct_change()
+        self.spx *= self._vol_scalar(self.scalar, self.spx)
         self.stocks = []
 
         for val in stocks:
@@ -55,8 +57,10 @@ class Portfolio:
         self.rets = self.data.pct_change()
         # self.rets = np.log(1+self.rets)
         self.mvo = MVO(self.rets).opt_port()
+        self.mvo *= self._vol_scalar(self.scalar, self.mvo)
         self._short()
         self.portfolio = self._create_portfolio()
+        self.portfolio *= self._vol_scalar(self.scalar, self.portfolio)
         self.drawdown = self._drawdown(self.portfolio)
         self.mvo_dd = self._drawdown(self.mvo)
         self.sharpe_ratio = self._sharpe_ratio(self.portfolio)
@@ -166,6 +170,9 @@ class Portfolio:
         val = self.portfolio.copy().fillna(0.0)
 
         return np.nanmean(returns[val < var])
+    
+    def _vol_scalar(self, scalar: int, returns: pd.DataFrame):
+        return scalar/(returns.std()*np.sqrt(TRADING_DAYS_PER_YEAR))
 
     def plot_var(self, returns, var, cvar, title: str):
 
