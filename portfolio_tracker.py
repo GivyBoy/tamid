@@ -72,17 +72,25 @@ with st.sidebar:
 
 
 st.write(f"Firstly, let's take a look at our portfolio's value since its creation in October 2020. Our PnL since "
-         f"inception  is **{round(cum_rets.portfolio_returns[-1], 2)}**%. Below shows the day-over-day change of the"
-         f" portfolio's value, in addition to an underwater/drawdown plot which shows the periods in which the"
-         f" portfolio's returns were negative from a local maxima")
+         f"inception, using a naive implementation is **{round(cum_rets.portfolio_returns[-1], 2)}**%, whereas our"
+         f" optimized (MVO) portfolio returned **{round(mvo_cum_rets.portfolio_returns[-1], 2)}**%. Below shows the "
+         f"day-over-day change of the portfolio's value, in addition to an underwater/drawdown plot which shows the"
+         f" periods in which the portfolio's returns were negative from a local maxima")
 
 difference = cum_rets.portfolio_returns[-2] - cum_rets.portfolio_returns[-1]
 delta = -1*round(difference, 2) if (cum_rets.portfolio_returns[-2] < 0 and cum_rets.portfolio_returns[-1] < 0) \
         else round(difference, 2)
 
-col1, col2, col3, col4, col5 = st.columns(5)
-col3.metric(label="Portfolio Value", value=f"{round(cum_rets.portfolio_returns[-1], 2)}%",
+mvo_difference = mvo_cum_rets.portfolio_returns[-2] - mvo_cum_rets.portfolio_returns[-1]
+mvo_delta = -1*round(mvo_difference, 2) if (mvo_cum_rets.portfolio_returns[-2] < 0 and
+                                            mvo_cum_rets.portfolio_returns[-1] < 0) else round(mvo_difference, 2)
+
+col1, col2, col3, col4 = st.columns(4)
+col2.metric(label="Naive Portfolio", value=f"{round(cum_rets.portfolio_returns[-1], 2)}%",
           delta=f"{delta}%")
+
+col3.metric(label="MVO Portfolio", value=f"{round(mvo_cum_rets.portfolio_returns[-1], 2)}%",
+          delta=f"{mvo_delta}%")
 
 plt.figure(figsize=(12, 8))
 plt.plot(cum_rets)
@@ -91,16 +99,18 @@ plt.plot(spx_rets)
 plt.title("TAMID's Cumulative Returns")
 plt.xlabel('Date')
 plt.ylabel('Returns (%)')
-plt.legend(["Portfolio", "MVO Portfolio", "S&P500"], loc='upper left')
+plt.legend(["Naive Portfolio", "MVO Portfolio", "S&P500"], bbox_to_anchor=(1, 1))
 plt.tight_layout()
 st.pyplot()
 
 plt.plot(TAMID.drawdown, color='red', linewidth=0.8)
+plt.plot(TAMID.mvo_dd, color='b', linewidth=0.8)
 plt.title("TAMID's Drawdowns")
 plt.xlabel('Date')
 plt.ylabel('Returns (%)')
 plt.fill_between(TAMID.drawdown.index, TAMID.drawdown.portfolio_returns, color='r', alpha=0.4)
-plt.legend(["Portfolio"], bbox_to_anchor=(1, 1))
+plt.fill_between(TAMID.mvo_dd.index, TAMID.mvo_dd.portfolio_returns, color='b', alpha=0.4)
+plt.legend(["Naive Portfolio", "MVO"], loc="lower left")
 plt.tight_layout()
 st.pyplot()
 
@@ -109,15 +119,15 @@ st.write(f"Next up, we have the portfolio's rolling standard deviation. The stan
 
 vol = TAMID.vol * 100
 mvo_vol = TAMID.mvo_vol * 100
-spx_vol = TAMID.spx.rolling(TAMID.window).std().dropna() * np.sqrt(252) * 100
+# spx_vol = TAMID.spx.rolling(TAMID.window).std().dropna() * np.sqrt(252) * 100
 # plt.figure(figsize=(12, 8))
 plt.plot(vol)
 plt.plot(mvo_vol)
-plt.plot(spx_vol)
+# plt.plot(spx_vol)
 plt.title("TAMID's Rolling Volatilty")
 plt.xlabel('Date')
 plt.ylabel('Volatility (%)')
-plt.legend(["Portfolio", "MVO", "S&P500"], bbox_to_anchor=(1, 1))
+plt.legend(["Naive", "MVO"], bbox_to_anchor=(1, 1))
 plt.tight_layout()
 st.pyplot()
 
@@ -131,7 +141,7 @@ plt.plot(TAMID.spx_beta)
 plt.title("TAMID's Rolling Beta")
 plt.xlabel('Date')
 plt.ylabel('Beta')
-plt.legend(["Portfolio Beta", "MVO Beta", "S&P500 Beta"], bbox_to_anchor=(1, 1))
+plt.legend(["Naive", "MVO", "S&P500"], bbox_to_anchor=(1, 1))
 plt.tight_layout()
 st.pyplot()
 
@@ -147,7 +157,7 @@ plt.plot(TAMID.mvo_sharpe)
 plt.title("TAMID's Rolling Sharpe Ratio")
 plt.xlabel('Date')
 plt.ylabel('Sharpe Ratio')
-plt.legend(["Sharpe Ratio", "MVO Sharpe Ratio"], bbox_to_anchor=(1, 1))
+plt.legend(["Naive Sharpe Ratio", "MVO Sharpe Ratio"], bbox_to_anchor=(1, 1))
 plt.tight_layout()
 st.pyplot()
 

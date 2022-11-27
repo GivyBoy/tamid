@@ -57,7 +57,8 @@ class Portfolio:
         self.mvo = MVO(self.rets).opt_port()
         self._short()
         self.portfolio = self._create_portfolio()
-        self.drawdown = self._drawdown()
+        self.drawdown = self._drawdown(self.portfolio)
+        self.mvo_dd = self._drawdown(self.mvo)
         self.sharpe_ratio = self._sharpe_ratio(self.portfolio)
         self.mvo_sharpe = self._sharpe_ratio(self.mvo)
         self.beta = self._get_beta(self.portfolio)
@@ -123,9 +124,9 @@ class Portfolio:
 
         return betas
 
-    def _drawdown(self):
+    def _drawdown(self, returns):
 
-        wealth_index = (1+self.portfolio).cumprod()
+        wealth_index = (1+returns).cumprod()
         previous_peaks = wealth_index.cummax()
 
         return (wealth_index - previous_peaks)/previous_peaks
