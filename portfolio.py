@@ -3,6 +3,7 @@ import sys
 import pandas as pd
 import numpy as np
 import yfinance as yf
+import statsmodels.api as sm
 import matplotlib.pyplot as plt
 from optimized_potfolio import MVO
 from dataclasses import dataclass
@@ -63,8 +64,13 @@ class Portfolio:
         self.portfolio *= self._vol_scalar(self.scalar, self.portfolio)
         self.drawdown = self._drawdown(self.portfolio)
         self.mvo_dd = self._drawdown(self.mvo)
-        self.sharpe_ratio = self._sharpe_ratio(self.portfolio)
-        self.mvo_sharpe = self._sharpe_ratio(self.mvo)
+        self.rolling_sharpe_ratio = self._rolling_sharpe_ratio(self.portfolio)
+        self.rolling_mvo_sharpe = self._rolling_sharpe_ratio(self.mvo)
+        self.sharpe_ratio = self._sharpe_ratio(self.portfolio.portfolio_returns)
+        self.mvo_sharpe_ratio = self._sharpe_ratio(self.mvo.portfolio_returns)
+        self.sortino_ratio = self._sortino_ratio(self.portfolio.portfolio_returns)
+        self.mvo_sortino_ratio = self._sortino_ratio(self.mvo.portfolio_returns)
+        self.alpha_regressions = self._alpha_regressions(self.spx["Adj Close"], self.mvo.portfolio_returns)
         self.beta = self._get_beta(self.portfolio)
         self.mvo_beta = self._get_beta(self.mvo)
         self.spx_beta = self._get_beta(self.spx)
@@ -135,12 +141,12 @@ class Portfolio:
 
         return (wealth_index - previous_peaks)/previous_peaks
 
-    def _sharpe_ratio(self, returns):
+    def _rolling_sharpe_ratio(self, returns):
 
         vol = self._vol(returns)
         mean_rets = returns.rolling(self.window).mean()
 
-        return ((mean_rets - (self.rate/TRADING_DAYS_PER_YEAR)) / vol) * np.sqrt(TRADING_DAYS_PER_YEAR)
+        return ((mean_rets) / vol) * np.sqrt(TRADING_DAYS_PER_YEAR)
 
     # def sortino_ratio(self, portfolio, rate=0.03):
     #
@@ -149,17 +155,77 @@ class Portfolio:
     #
     #     return (mean_rets - rate) / vol
 
+    def _sharpe_ratio(self, strategy_returns: pd.Series) -> float:
+        """ Compute annualized Sharpe Ratio for any strategy or security time-series of daily returns.
+
+        Args:
+            strategy_returns (pd.Series): time-series of daily returns.
+
+        Returns:
+            float: annualized Sharpe Ratio.
+        """
+
+        return strategy_returns.mean() / strategy_returns.std() * np.sqrt(TRADING_DAYS_PER_YEAR)
+
+    def _sortino_ratio(self, strategy_returns: pd.Series) -> float:
+        """ Compute annualized Sortino Ratio for any strategy or security time-series of daily returns.
+            This is the Sharpe Ratio, but with downside returns volatility.
+
+        Args:
+            strategy_returns (pd.Series): time-series of daily returns.
+
+        Returns:
+            float: annualized Sharpe Ratio.
+        """
+
+        return strategy_returns.mean() / strategy_returns[strategy_returns < 0].std() * np.sqrt(TRADING_DAYS_PER_YEAR)
+
+    def _alpha_regressions(self, benchmark_returns: pd.Series, strategy_returns: pd.Series) -> pd.Series:
+
+        benchmark_returns = benchmark_returns.dropna()
+        strategy_returns = strategy_returns.dropna()
+
+        benchmark_returns.name = "SPY"
+        strategy_returns.name = "MVO"
+
+        indices = benchmark_returns.index.intersection(strategy_returns.index)
+
+        benchmark_returns = benchmark_returns.loc[indices]
+        strategy_returns = strategy_returns.loc[indices]
+
+        # Add constant to benchmark returns
+        benchmark_returns_const = sm.add_constant(benchmark_returns)
+
+        # Construct OLS regression
+        model = sm.OLS(strategy_returns, benchmark_returns_const)
+        reg = model.fit()
+
+        # ------------------------------ Store regression data in summary DataFrame ------------------------------
+
+        reg_summary = pd.DataFrame({f'{strategy_returns.name} ~ {benchmark_returns.name}':
+            {
+                'Portfolio Alpha': reg.params[0],
+                'Alpha T-Stat': reg.tvalues[0],
+                'Portfolio Beta': reg.params[1],
+                'Beta T-Stat': reg.tvalues[1]
+            }
+        })
+
+        reg_summary = reg_summary.reindex(index=['Portfolio Alpha', 'Alpha T-Stat', 'Portfolio Beta', 'Beta T-Stat'])
+
+        return reg_summary
+
     def _info_ratio(self):
 
         spx_rets = self.spx["Adj Close"].rolling(self.window).mean()
         mean_rets = self.portfolio.portfolio_returns.rolling(self.window).mean()
         difference = mean_rets - spx_rets
-        vol = difference.rolling(self.window).std() * np.sqrt(252)
+        vol = difference.rolling(self.window).std() * np.sqrt(TRADING_DAYS_PER_YEAR)
 
         return difference / vol
 
     def _vol(self, returns):
-        return returns.rolling(self.window).std().dropna() * np.sqrt(252)
+        return returns.rolling(self.window).std().dropna() * np.sqrt(TRADING_DAYS_PER_YEAR)
 
     def _var(self, returns):
         return np.percentile(returns, 100 * (1 - self.alpha))
@@ -170,7 +236,7 @@ class Portfolio:
         val = self.portfolio.copy().fillna(0.0)
 
         return np.nanmean(returns[val < var])
-    
+
     def _vol_scalar(self, scalar: int, returns: pd.DataFrame):
         return scalar/(returns.std()*np.sqrt(TRADING_DAYS_PER_YEAR))
 
