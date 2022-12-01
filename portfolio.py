@@ -204,7 +204,7 @@ class Portfolio:
 
         reg_summary = pd.DataFrame({f'{strategy_returns.name} ~ {benchmark_returns.name}':
             {
-                'Portfolio Alpha': reg.params[0],
+                'Portfolio Alpha': reg.params[0]*252,
                 'Alpha T-Stat': reg.tvalues[0],
                 'Portfolio Beta': reg.params[1],
                 'Beta T-Stat': reg.tvalues[1]
